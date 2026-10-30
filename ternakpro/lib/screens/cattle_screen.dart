@@ -3,6 +3,7 @@ import '../core/theme.dart';
 import '../models/cattle.dart';
 import '../data/mock_data.dart';
 import 'cattle_detail_screen.dart';
+import 'add_medical_record_modal.dart';
 
 class CattleScreen extends StatefulWidget {
   const CattleScreen({super.key});
@@ -975,10 +976,14 @@ class _CattleScreenState extends State<CattleScreen> {
             ),
           ),
           onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => CattleDetailScreen(cattle: cattle)),
-            );
+            if (cattle.customActionButtonText == 'Catatan Medis') {
+              AddMedicalRecordModal.show(context, initialEartag: cattle.eartagId);
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => CattleDetailScreen(cattle: cattle)),
+              );
+            }
           },
           child: Text(
             btnLabel,
