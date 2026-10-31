@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/cattle.dart';
+import '../services/local_db_service.dart';
+import '../services/sync_service.dart';
 
 class MockDatabase extends ChangeNotifier {
   static final MockDatabase _instance = MockDatabase._internal();
@@ -436,8 +438,41 @@ class MockDatabase extends ChangeNotifier {
     return _medicalRecords.where((m) => m.eartagId == eartagId).toList();
   }
 
+  Future<void> initializeFromDb() async {
+    final localDb = LocalDbService();
+    try {
+      final cattles = await localDb.getCattles();
+      if (cattles.isNotEmpty) {
+        _cattleList.clear();
+        _cattleList.addAll(cattles);
+      }
+      final txs = await localDb.getTransactions();
+      if (txs.isNotEmpty) {
+        _transactions.clear();
+        _transactions.addAll(txs);
+      }
+      final meds = await localDb.getMedicalRecords();
+      if (meds.isNotEmpty) {
+        _medicalRecords.clear();
+        _medicalRecords.addAll(meds);
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading from local SQLite: $e');
+    }
+  }
+
+  void addCattle(Cattle cattle) {
+    _cattleList.insert(0, cattle);
+    LocalDbService().insertCattle(cattle);
+    SyncService().syncNow();
+    notifyListeners();
+  }
+
   void addTransaction(FinancialTransaction tx) {
     _transactions.insert(0, tx);
+    LocalDbService().insertTransaction(tx);
+    SyncService().syncNow();
     notifyListeners();
   }
 
@@ -454,6 +489,8 @@ class MockDatabase extends ChangeNotifier {
 
   void addMedicalRecord(MedicalRecord record) {
     _medicalRecords.insert(0, record);
+    LocalDbService().insertMedicalRecord(record);
+    SyncService().syncNow();
     _activities.insert(
       0,
       ActivityItem(
@@ -497,6 +534,8 @@ class MockDatabase extends ChangeNotifier {
     final cattle = _cattleList.firstWhere((c) => c.eartagId == eartagId);
     cattle.beratTerakhir = newWeight;
     cattle.weightHistory.add(newWeight);
+    LocalDbService().updateCattle(cattle);
+    SyncService().syncNow();
     _activities.insert(
       0,
       ActivityItem(

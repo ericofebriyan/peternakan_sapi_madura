@@ -1010,6 +1010,7 @@ class _CattleScreenState extends State<CattleScreen> {
     final eartagCtrl = TextEditingController();
     final breedCtrl = TextEditingController(text: 'Sapi Madura Asli');
     final weightCtrl = TextEditingController(text: '200');
+    final db = MockDatabase();
 
     showModalBottomSheet(
       context: context,
@@ -1078,10 +1079,30 @@ class _CattleScreenState extends State<CattleScreen> {
                     ),
                   ),
                   onPressed: () {
+                    final tag = eartagCtrl.text.trim();
+                    final breed = breedCtrl.text.trim().isNotEmpty ? breedCtrl.text.trim() : 'Sapi Madura Asli';
+                    final weight = double.tryParse(weightCtrl.text) ?? 200.0;
+
+                    if (tag.isNotEmpty) {
+                      db.addCattle(
+                        Cattle(
+                          eartagId: tag.startsWith('#') ? tag : '#$tag',
+                          ras: breed,
+                          kelompokUmur: 'Muda',
+                          tanggalMasuk: DateTime.now(),
+                          beratAwal: weight,
+                          beratTerakhir: weight,
+                          statusKesehatan: 'Sehat',
+                          weightHistory: [weight],
+                          kandangPen: 'Kandang Pen A-01',
+                        ),
+                      );
+                    }
+
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Ternak ${eartagCtrl.text} berhasil ditambahkan!'),
+                        content: Text('Ternak $tag berhasil ditambahkan dan disimpan permanen!'),
                         backgroundColor: const Color(0xFF059669),
                       ),
                     );

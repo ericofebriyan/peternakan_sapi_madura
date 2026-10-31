@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Cattle {
   final String eartagId;
   final String ras;
@@ -47,6 +49,64 @@ class Cattle {
     if (daysInFeedlot <= 0) return 0.0;
     return weightGain / daysInFeedlot;
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'eartag_id': eartagId,
+      'ras': ras,
+      'kelompok_umur': kelompokUmur,
+      'tanggal_masuk': tanggalMasuk.toIso8601String(),
+      'berat_awal': beratAwal,
+      'berat_terakhir': beratTerakhir,
+      'status_kesehatan': statusKesehatan,
+      'weight_history': jsonEncode(weightHistory),
+      'kandang_pen': kandangPen,
+      'umur_deskripsi': umurDeskripsi,
+      'pakan': pakan,
+      'adg_custom': adgCustom,
+      'adg_status': adgStatus,
+      'custom_action_button_text': customActionButtonText,
+      'manual_days_in_feedlot': manualDaysInFeedlot,
+    };
+  }
+
+  factory Cattle.fromMap(Map<String, dynamic> map) {
+    List<double> history = [];
+    if (map['weight_history'] != null) {
+      if (map['weight_history'] is String) {
+        try {
+          final decoded = jsonDecode(map['weight_history']);
+          if (decoded is List) {
+            history = decoded.map((e) => (e as num).toDouble()).toList();
+          }
+        } catch (_) {}
+      } else if (map['weight_history'] is List) {
+        history = (map['weight_history'] as List).map((e) => (e as num).toDouble()).toList();
+      }
+    }
+
+    return Cattle(
+      eartagId: map['eartag_id'] ?? '',
+      ras: map['ras'] ?? '',
+      kelompokUmur: map['kelompok_umur'] ?? '',
+      tanggalMasuk: map['tanggal_masuk'] != null
+          ? DateTime.tryParse(map['tanggal_masuk'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      beratAwal: (map['berat_awal'] as num?)?.toDouble() ?? 0.0,
+      beratTerakhir: (map['berat_terakhir'] as num?)?.toDouble() ?? 0.0,
+      statusKesehatan: map['status_kesehatan'] ?? 'Sehat',
+      weightHistory: history.isNotEmpty
+          ? history
+          : [(map['berat_awal'] as num?)?.toDouble() ?? 0.0, (map['berat_terakhir'] as num?)?.toDouble() ?? 0.0],
+      kandangPen: map['kandang_pen'] ?? 'Kandang Pen A-01',
+      umurDeskripsi: map['umur_deskripsi'],
+      pakan: map['pakan'],
+      adgCustom: (map['adg_custom'] as num?)?.toDouble(),
+      adgStatus: map['adg_status'],
+      customActionButtonText: map['custom_action_button_text'],
+      manualDaysInFeedlot: map['manual_days_in_feedlot'] as int?,
+    );
+  }
 }
 
 enum ExpenseCategory {
@@ -69,6 +129,14 @@ extension ExpenseCategoryExt on ExpenseCategory {
         return 'Insidental & Lainnya';
     }
   }
+
+  static ExpenseCategory fromString(String val) {
+    val = val.toLowerCase();
+    if (val.contains('bakalan')) return ExpenseCategory.pembelianBakalan;
+    if (val.contains('pakan') || val.contains('konsentrat')) return ExpenseCategory.konsentratPakan;
+    if (val.contains('medis') || val.contains('vitamin') || val.contains('salep')) return ExpenseCategory.vitaminMedis;
+    return ExpenseCategory.insidental;
+  }
 }
 
 class FinancialTransaction {
@@ -87,6 +155,30 @@ class FinancialTransaction {
     required this.tanggal,
     required this.catatan,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'eartag_id': eartagId,
+      'kategori': kategori.displayName,
+      'nominal': nominal,
+      'tanggal': tanggal.toIso8601String(),
+      'catatan': catatan,
+    };
+  }
+
+  factory FinancialTransaction.fromMap(Map<String, dynamic> map) {
+    return FinancialTransaction(
+      id: map['id']?.toString() ?? '',
+      eartagId: map['eartag_id'] ?? '',
+      kategori: ExpenseCategoryExt.fromString(map['kategori'] ?? ''),
+      nominal: (map['nominal'] as num?)?.toDouble() ?? 0.0,
+      tanggal: map['tanggal'] != null
+          ? DateTime.tryParse(map['tanggal'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      catatan: map['catatan'] ?? '',
+    );
+  }
 }
 
 enum MedicalHandlingType {
@@ -102,6 +194,11 @@ extension MedicalHandlingTypeExt on MedicalHandlingType {
       case MedicalHandlingType.resepMantri:
         return 'Resep Mantri';
     }
+  }
+
+  static MedicalHandlingType fromString(String val) {
+    if (val.toLowerCase().contains('mandiri')) return MedicalHandlingType.mandiri;
+    return MedicalHandlingType.resepMantri;
   }
 }
 
@@ -133,6 +230,42 @@ class MedicalRecord {
     this.catatanKhusus,
     this.jenisCatatanKhusus,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'eartag_id': eartagId,
+      'tanggal': tanggal.toIso8601String(),
+      'diagnosis': diagnosis,
+      'tindakan': tindakan,
+      'obat': obat,
+      'petugas': petugas,
+      'jenis_penanganan': jenisPenanganan.displayName,
+      'lokasi_kandang': lokasiKandang,
+      'status_tindak_lanjut': statusTindakLanjut,
+      'catatan_khusus': catatanKhusus,
+      'jenis_catatan_khusus': jenisCatatanKhusus,
+    };
+  }
+
+  factory MedicalRecord.fromMap(Map<String, dynamic> map) {
+    return MedicalRecord(
+      id: map['id']?.toString() ?? '',
+      eartagId: map['eartag_id'] ?? '',
+      tanggal: map['tanggal'] != null
+          ? DateTime.tryParse(map['tanggal'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      diagnosis: map['diagnosis'] ?? '',
+      tindakan: map['tindakan'] ?? '',
+      obat: map['obat'] ?? '',
+      petugas: map['petugas'] ?? '',
+      jenisPenanganan: MedicalHandlingTypeExt.fromString(map['jenis_penanganan'] ?? ''),
+      lokasiKandang: map['lokasi_kandang'] ?? 'Kandang A',
+      statusTindakLanjut: map['status_tindak_lanjut'] ?? 'Membaik / Selesai',
+      catatanKhusus: map['catatan_khusus'],
+      jenisCatatanKhusus: map['jenis_catatan_khusus'],
+    );
+  }
 }
 
 class ActivityItem {
